@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dremio vs Redshift TCO Calculator | [Your Company]</title>
+    <meta name="description" content="Internal tool for calculating total cost of ownership between Dremio Cloud and Amazon Redshift">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
+    
+    <!-- Your existing calculator styles and code here -->
+        function updateResults(costs, months, dataVolume, monthlyQueries) {
+            // Format currency
+            const fmt = (value) => new Intl.NumberFormat('en-US', { 
+                style: 'currency', 
+                currency: 'USD', 
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0 
+            }).format(value);
+
+            // Update table with breakdown
+            document.getElementById('dremioTotal').textContent = fmt(costs.dremio.total);
+            document.getElementById('dremioInfra').textContent = fmt(costs.dremio.infrastructure);
+            document.getElementById('dremioETL').textContent = fmt(costs.dremio.etl);
+            document.getElementById('dremioOps').textContent = fmt(costs.dremio.ops);
+
+            document.getElementById('redshiftProvTotal').textContent = fmt(costs.redshiftProv.total);
+            document.getElementById('redshiftProvInfra').textContent = fmt(costs.redshiftProv.infrastructure);
+            document.getElementById('redshiftProvETL').textContent = fmt(costs.redshiftProv.etl);
+            document.getElementById('redshiftProvOps').textContent = fmt(costs.redshiftProv.ops);
+
+            document.getElementById('redshiftServerTotal').textContent = fmt(costs.redshiftServer.total);
+            document.getElementById('redshiftServerInfra').textContent = fmt(costs.redshiftServer.infrastructure);
+            document.getElementById('redshiftServerETL').textContent = fmt(costs.redshiftServer.etl);
+            document.getElementById('redshiftServerOps').textContent = fmt(costs.redshiftServer.ops);
+
+            // Update chart
+            const maxCost = Math.max(costs.dremio.total, costs.redshiftProv.total, costs.redshiftServer.total);
+            
+            document.getElementById('dremioBar').style.height = `${(costs.dremio.total / maxCost) * 250}px`;
+            document.getElementById('redshiftProvBar').style.height = `${(costs.redshiftProv.total / maxCost) * 250}px`;
+            document.getElementById('redshiftServerBar').style.height = `${(costs.redshiftServer.total / maxCost) * 250}px`;
+
+            document.getElementById('dremioBarValue').textContent = fmt(costs.dremio.total);
+            document.getElementById('redshiftProvBarValue').textContent = fmt(costs.redshiftProv.total);
+            document.getElementById('redshiftServerBarValue').textContent = fmt(costs.redshiftServer.total);
+
+            // Update savings analysis
+            const maxRedshift = Math.max(costs.redshiftProv.total, costs.redshiftServer.total);
+            const savings = maxRedshift - costs.dremio.total;
+            const savingsPercent = ((savings / maxRedshift) * 100).toFixed(1);
+            
+            // Calculate ETL savings specifically
+            const maxETLCost = Math.max(costs.redshiftProv.etl, costs.redshiftServer.etl);
+            const etlSavings = maxETLCost - costs.dremio.etl;
+            
+            let savingsText;
+            if (savings > 0) {
+                savingsText = `Dremio saves ${fmt(savings)} annually (${savingsPercent}% total savings)\nIncluding ${fmt(etlSavings)} in ETL cost elimination`;
+                document.getElementById('savingsHighlight').style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else {
+                const overage = Math.abs(savings);
+                const overagePercent = ((overage / costs.dremio.total) * 100).toFixed(1);
+                savingsText = `Dremio costs ${fmt(overage)} more annually (+${overagePercent}%)\nBut eliminates ETL complexity and reduces time-to-insight`;
+                document.getElementById('savingsHighlight').style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+            }
+            
+            document.getElementById('savingsText').innerHTML = savingsText.replace('\n', '<br>');
+        }<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dremio vs Redshift TCO Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .section h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            border-bottom: 2px solid #e1e8ed;
+            padding-bottom: 10px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .results {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: none;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .comparison-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .cost-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .dremio { color: #059669; }
+        .redshift-prov { color: #dc2626; }
+        .redshift-server { color: #7c3aed; }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .bar-chart {
+            display: flex;
+            align-items: end;
+            gap: 20px;
+            height: 300px;
+            padding: 20px 0;
+        }
+        
+        .bar {
+            flex: 1;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            min-height: 20px;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .bar:hover {
+            transform: scale(1.05);
+        }
+        
+        .bar.dremio-bar {
+            background: linear-gradient(to top, #059669, #10b981);
+        }
+        
+        .bar.redshift-prov-bar {
+            background: linear-gradient(to top, #dc2626, #ef4444);
+        }
+        
+        .bar.redshift-server-bar {
+            background: linear-gradient(to top, #7c3aed, #a855f7);
+        }
+        
+        .bar-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+        }
+        
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: #374151;
+            white-space: nowrap;
+        }
+        
+        .savings-highlight {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .savings-highlight h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .bar-chart {
+                height: 250px;
+                gap: 10px;
+            }
+            
+            .results {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TCO Calculator</h1>
+            <p>Compare Dremio Cloud vs Amazon Redshift Total Cost of Ownership</p>
+        </div>
+        
+        <div class="content">
+            <div class="grid">
+                <!-- Input Parameters -->
+                <div class="section">
+                    <h2>🔧 Input Parameters</h2>
+                    <div class="input-group">
+                        <label for="analysisMonths">Analysis Period (months)</label>
+                        <input type="number" id="analysisMonths" value="12" min="1" max="36">
+                        <small style="color: #6b7280; font-size: 12px;">How many months to calculate total cost of ownership</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="dataVolume">Data Volume (TB)</label>
+                        <input type="number" id="dataVolume" value="10" min="0.1" step="0.1">
+                        <small style="color: #6b7280; font-size: 12px;">Total amount of data stored and processed</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="monthlyQueries">Monthly Queries</label>
+                        <input type="number" id="monthlyQueries" value="50000" min="100">
+                        <small style="color: #6b7280; font-size: 12px;">Average number of SQL queries executed per month</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="concurrentUsers">Concurrent Users</label>
+                        <input type="number" id="concurrentUsers" value="25" min="1">
+                        <small style="color: #6b7280; font-size: 12px;">Peak number of users querying simultaneously</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="businessHours">Redshift Provisioned Usage (%)</label>
+                        <input type="number" id="businessHours" value="100" min="1" max="100">
+                        <small style="color: #6b7280; font-size: 12px;">Provisioned clusters charge 24/7 unless manually paused</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="serverlessUsage">Redshift Serverless Usage (%)</label>
+                        <input type="number" id="serverlessUsage" value="40" min="1" max="100">
+                        <small style="color: #6b7280; font-size: 12px;">Serverless only charges when actively processing queries</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="avgQueryTime">Avg Query Time (seconds)</label>
+                        <input type="number" id="avgQueryTime" value="15" min="1">
+                        <small style="color: #6b7280; font-size: 12px;">Typical time for queries to complete execution</small>
+                    </div>
+                </div>
+                
+                <!-- Additional Costs -->
+                <div class="section">
+                    <h2>💰 Additional Costs</h2>
+                    <div class="input-group">
+                        <label for="dataTransfer">Data Transfer (GB/month)</label>
+                        <input type="number" id="dataTransfer" value="500" min="0">
+                        <small style="color: #6b7280; font-size: 12px;">Data moved between AWS regions or to external systems</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="backupRetention">Backup Retention (months)</label>
+                        <input type="number" id="backupRetention" value="6" min="1" max="12">
+                        <small style="color: #6b7280; font-size: 12px;">How long to keep backup snapshots for recovery</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="supportLevel">Support Level</label>
+                        <select id="supportLevel">
+                            <option value="0">Basic (Free)</option>
+                            <option value="0.1" selected>Enterprise (10%)</option>
+                            <option value="0.15">Premium (15%)</option>
+                        </select>
+                        <small style="color: #6b7280; font-size: 12px;">AWS/vendor support as percentage of infrastructure costs</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="trainingUsers">Training Users</label>
+                        <input type="number" id="trainingUsers" value="10" min="0">
+                        <small style="color: #6b7280; font-size: 12px;">Number of staff requiring platform training</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="migrationHours">Migration Hours</label>
+                        <input type="number" id="migrationHours" value="200" min="0">
+                        <small style="color: #6b7280; font-size: 12px;">Professional services hours for data migration</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="professionalServices">Professional Services (hours)</label>
+                        <input type="number" id="professionalServices" value="40" min="0">
+                        <small style="color: #6b7280; font-size: 12px;">Consulting hours for setup and optimization</small>
+                    </div>
+                </div>
+                
+                <!-- ETL & Data Access Costs -->
+                <div class="section">
+                    <h2>🔄 ETL & Data Access</h2>
+                    <div class="input-group">
+                        <label for="externalDataTB">External Data Scanned (TB/month)</label>
+                        <input type="number" id="externalDataTB" value="5" min="0" step="0.1">
+                        <small style="color: #6b7280; font-size: 12px;">Data queried from S3/external sources (affects Spectrum costs)</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="etlPipelineHours">ETL Pipeline Hours/month</label>
+                        <input type="number" id="etlPipelineHours" value="200" min="0">
+                        <small style="color: #6b7280; font-size: 12px;">AWS Glue/data processing hours needed for Redshift</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="dataEngineers">Data Engineers (FTE)</label>
+                        <input type="number" id="dataEngineers" value="1" min="0" step="0.25">
+                        <small style="color: #6b7280; font-size: 12px;">Full-time engineers needed to manage ETL pipelines</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="etlTools">ETL Tools Cost ($/month)</label>
+                        <input type="number" id="etlTools" value="2000" min="0">
+                        <small style="color: #6b7280; font-size: 12px;">Airflow, dbt, Fivetran, or other data pipeline tools</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="dataLatency">Data Freshness Requirement</label>
+                        <select id="dataLatency">
+                            <option value="1">Real-time (expensive ETL)</option>
+                            <option value="0.7" selected>Near real-time (moderate ETL)</option>
+                            <option value="0.5">Daily batch (basic ETL)</option>
+                        </select>
+                        <small style="color: #6b7280; font-size: 12px;">How fresh data needs to be (affects ETL complexity)</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="dataQuality">Data Quality/Governance</label>
+                        <select id="dataQuality">
+                            <option value="0.5">Basic</option>
+                            <option value="1" selected>Standard</option>
+                            <option value="1.5">Enterprise</option>
+                        </select>
+                        <small style="color: #6b7280; font-size: 12px;">Level of data validation, lineage, and compliance required</small>
+                    </div>
+                </div>
+                
+                <!-- Results Section -->
+                <div class="section results">
+                    <h2>📊 Cost Comparison Results</h2>
+                    
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Solution</th>
+                                <th>Annual Total</th>
+                                <th>Infrastructure</th>
+                                <th>ETL/Data Access</th>
+                                <th>Operations</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong class="dremio">Dremio Cloud</strong></td>
+                                <td class="cost-value dremio" id="dremioTotal">$0</td>
+                                <td class="cost-value" id="dremioInfra">$0</td>
+                                <td class="cost-value" id="dremioETL">$0</td>
+                                <td class="cost-value" id="dremioOps">$0</td>
+                            </tr>
+                            <tr>
+                                <td><strong class="redshift-prov">Redshift Provisioned</strong></td>
+                                <td class="cost-value redshift-prov" id="redshiftProvTotal">$0</td>
+                                <td class="cost-value" id="redshiftProvInfra">$0</td>
+                                <td class="cost-value" id="redshiftProvETL">$0</td>
+                                <td class="cost-value" id="redshiftProvOps">$0</td>
+                            </tr>
+                            <tr>
+                                <td><strong class="redshift-server">Redshift Serverless</strong></td>
+                                <td class="cost-value redshift-server" id="redshiftServerTotal">$0</td>
+                                <td class="cost-value" id="redshiftServerInfra">$0</td>
+                                <td class="cost-value" id="redshiftServerETL">$0</td>
+                                <td class="cost-value" id="redshiftServerOps">$0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <h4 style="color: #1e3c72; margin-bottom: 15px;">💡 Key Architectural Differences</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; font-size: 14px;">
+                            <div>
+                                <strong class="dremio">Dremio:</strong><br>
+                                • Zero-ETL architecture<br>
+                                • Direct S3/data lake access<br>
+                                • No data movement required<br>
+                                • Real-time data freshness
+                            </div>
+                            <div>
+                                <strong class="redshift-prov">Redshift Provisioned:</strong><br>
+                                • ETL/ELT pipelines required<br>
+                                • Spectrum for external data<br>
+                                • Data ingestion costs<br>
+                                • Complex data governance
+                            </div>
+                            <div>
+                                <strong class="redshift-server">Redshift Serverless:</strong><br>
+                                • ETL/ELT pipelines required<br>
+                                • Spectrum included<br>
+                                • Data ingestion costs<br>
+                                • Simplified management
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Annual Cost Comparison</h3>
+                        <div class="bar-chart" id="costChart">
+                            <div class="bar dremio-bar" id="dremioBar">
+                                <div class="bar-value" id="dremioBarValue">$0</div>
+                                <div class="bar-label">Dremio<br>Cloud</div>
+                            </div>
+                            <div class="bar redshift-prov-bar" id="redshiftProvBar">
+                                <div class="bar-value" id="redshiftProvBarValue">$0</div>
+                                <div class="bar-label">Redshift<br>Provisioned</div>
+                            </div>
+                            <div class="bar redshift-server-bar" id="redshiftServerBar">
+                                <div class="bar-value" id="redshiftServerBarValue">$0</div>
+                                <div class="bar-label">Redshift<br>Serverless</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="savings-highlight" id="savingsHighlight">
+                        <h3>💡 Potential Annual Savings</h3>
+                        <p id="savingsText">Configure your parameters to see potential savings</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pricing constants (based on current AWS and Dremio pricing)
+        const PRICING = {
+            dremio: {
+                dcuPerHour: 0.39,
+                storagePerGBMonth: 0.023
+            },
+            redshift: {
+                // RA3.xlplus node for provisioned
+                nodePerHour: 0.75,
+                // RPU for serverless
+                rpuPerHour: 0.375,
+                managedStoragePerGBMonth: 0.024,
+                backupStoragePerGBMonth: 0.024,
+                // Spectrum pricing for external data access
+                spectrumPerTB: 5.00
+            },
+            etl: {
+                // ETL infrastructure costs for Redshift
+                gluePerHour: 0.44, // AWS Glue DPU
+                lambdaPerMillion: 0.20, // Lambda invocations
+                stepFunctionsPerTransition: 0.025,
+                dataEngineerSalary: 150000, // Annual salary
+                etlMaintenanceMultiplier: 0.3 // 30% overhead for maintenance
+            },
+            shared: {
+                dataTransferPerGB: 0.09,
+                trainingPerUser: 2000,
+                migrationPerHour: 200,
+                professionalServicesPerHour: 250
+            }
+        };
+
+        function calculateDCUHours(queries, avgTime, users) {
+            // Estimate DCU hours based on query load and concurrent users
+            const totalQuerySeconds = queries * avgTime;
+            const dcuFactor = Math.max(1, Math.ceil(users / 5)); // Rough DCU sizing
+            return (totalQuerySeconds * dcuFactor) / 3600;
+        }
+
+        function calculateRedshiftNodes(dataVolume) {
+            // Estimate nodes needed based on data volume
+            return Math.max(2, Math.ceil(dataVolume / 10)); // Rough node sizing
+        }
+
+        function calculateRPUHours(queries, avgTime, dataVolume) {
+            // Estimate RPU hours for serverless
+            const totalQuerySeconds = queries * avgTime;
+            const rpuFactor = Math.max(8, Math.ceil(dataVolume * 2)); // Base RPU sizing
+            return (totalQuerySeconds * rpuFactor) / 3600;
+        }
+
+        function calculateCosts() {
+            // Get input values
+            const months = parseInt(document.getElementById('analysisMonths').value);
+            const dataVolume = parseFloat(document.getElementById('dataVolume').value);
+            const monthlyQueries = parseInt(document.getElementById('monthlyQueries').value);
+            const users = parseInt(document.getElementById('concurrentUsers').value);
+            const businessHours = parseFloat(document.getElementById('businessHours').value) / 100;
+            const serverlessUsage = parseFloat(document.getElementById('serverlessUsage').value) / 100;
+            const avgQueryTime = parseInt(document.getElementById('avgQueryTime').value);
+            
+            // Additional costs
+            const dataTransfer = parseInt(document.getElementById('dataTransfer').value);
+            const backupRetention = parseInt(document.getElementById('backupRetention').value);
+            const supportLevel = parseFloat(document.getElementById('supportLevel').value);
+            const trainingUsers = parseInt(document.getElementById('trainingUsers').value);
+            const migrationHours = parseInt(document.getElementById('migrationHours').value);
+            const professionalServices = parseInt(document.getElementById('professionalServices').value);
+
+            // ETL & Data Access costs
+            const externalDataTB = parseFloat(document.getElementById('externalDataTB').value);
+            const etlPipelineHours = parseInt(document.getElementById('etlPipelineHours').value);
+            const dataEngineers = parseFloat(document.getElementById('dataEngineers').value);
+            const etlTools = parseInt(document.getElementById('etlTools').value);
+            const dataLatency = parseFloat(document.getElementById('dataLatency').value);
+            const dataQuality = parseFloat(document.getElementById('dataQuality').value);
+
+            // Calculate Dremio costs (Zero-ETL, pay per query)
+            const dcuHours = calculateDCUHours(monthlyQueries, avgQueryTime, users) * serverlessUsage;
+            const dremioCompute = dcuHours * PRICING.dremio.dcuPerHour * months;
+            const dremioStorage = dataVolume * 1000 * PRICING.dremio.storagePerGBMonth * months;
+            const dremioInfrastructure = dremioCompute + dremioStorage;
+            
+            // Dremio ETL costs (minimal - just data connectivity)
+            const dremioETLCosts = 0; // Zero-ETL architecture
+            
+            // Calculate Redshift Provisioned costs (24/7 billing unless manually paused)
+            const nodes = calculateRedshiftNodes(dataVolume);
+            const nodeHours = 24 * 30 * businessHours; // Full hours per month (24/7 unless paused)
+            const redshiftProvCompute = nodes * nodeHours * PRICING.redshift.nodePerHour * months;
+            const redshiftProvStorage = dataVolume * 1000 * PRICING.redshift.managedStoragePerGBMonth * months;
+            const redshiftProvInfrastructure = redshiftProvCompute + redshiftProvStorage;
+            
+            // Redshift Provisioned ETL costs
+            const redshiftProvSpectrum = externalDataTB * PRICING.redshift.spectrumPerTB * months;
+            const redshiftProvETLInfra = etlPipelineHours * PRICING.etl.gluePerHour * months;
+            const redshiftProvDataEngineering = (dataEngineers * PRICING.etl.dataEngineerSalary / 12) * months;
+            const redshiftProvETLTools = etlTools * months;
+            const redshiftProvETLMaintenance = (redshiftProvETLInfra + redshiftProvDataEngineering) * PRICING.etl.etlMaintenanceMultiplier;
+            const redshiftProvETLTotal = (redshiftProvSpectrum + redshiftProvETLInfra + redshiftProvDataEngineering + redshiftProvETLTools + redshiftProvETLMaintenance) * dataLatency * dataQuality;
+            
+            // Calculate Redshift Serverless costs (auto-scaling, pay only when active)
+            const rpuHours = calculateRPUHours(monthlyQueries, avgQueryTime, dataVolume) * serverlessUsage;
+            const redshiftServerCompute = rpuHours * PRICING.redshift.rpuPerHour * months;
+            const redshiftServerStorage = dataVolume * 1000 * PRICING.redshift.managedStoragePerGBMonth * months;
+            const redshiftServerInfrastructure = redshiftServerCompute + redshiftServerStorage;
+            
+            // Redshift Serverless ETL costs (Spectrum included in RPU pricing, but still need ETL)
+            const redshiftServerETLInfra = etlPipelineHours * PRICING.etl.gluePerHour * months * 0.8; // 20% discount due to serverless
+            const redshiftServerDataEngineering = (dataEngineers * PRICING.etl.dataEngineerSalary / 12) * months;
+            const redshiftServerETLTools = etlTools * months;
+            const redshiftServerETLMaintenance = (redshiftServerETLInfra + redshiftServerDataEngineering) * PRICING.etl.etlMaintenanceMultiplier;
+            const redshiftServerETLTotal = (redshiftServerETLInfra + redshiftServerDataEngineering + redshiftServerETLTools + redshiftServerETLMaintenance) * dataLatency * dataQuality;
+
+            // Shared operational costs
+            const dataTransferCost = dataTransfer * PRICING.shared.dataTransferPerGB * months;
+            const backupCost = dataVolume * 1000 * 0.3 * PRICING.redshift.backupStoragePerGBMonth * backupRetention;
+            const trainingCost = trainingUsers * PRICING.shared.trainingPerUser;
+            const migrationCost = migrationHours * PRICING.shared.migrationPerHour;
+            const professionalServicesCost = professionalServices * PRICING.shared.professionalServicesPerHour;
+
+            const sharedOpsCosts = dataTransferCost + backupCost + trainingCost + migrationCost + professionalServicesCost;
+            
+            // Calculate support costs
+            const dremioSupport = (dremioInfrastructure + dremioETLCosts + sharedOpsCosts) * supportLevel;
+            const redshiftProvSupport = (redshiftProvInfrastructure + redshiftProvETLTotal + sharedOpsCosts) * supportLevel;
+            const redshiftServerSupport = (redshiftServerInfrastructure + redshiftServerETLTotal + sharedOpsCosts) * supportLevel;
+
+            // Total costs
+            const dremioTotal = dremioInfrastructure + dremioETLCosts + sharedOpsCosts + dremioSupport;
+            const redshiftProvTotal = redshiftProvInfrastructure + redshiftProvETLTotal + sharedOpsCosts + redshiftProvSupport;
+            const redshiftServerTotal = redshiftServerInfrastructure + redshiftServerETLTotal + sharedOpsCosts + redshiftServerSupport;
+
+            // Update UI with breakdown
+            updateResults({
+                dremio: {
+                    total: dremioTotal,
+                    infrastructure: dremioInfrastructure,
+                    etl: dremioETLCosts,
+                    ops: sharedOpsCosts + dremioSupport
+                },
+                redshiftProv: {
+                    total: redshiftProvTotal,
+                    infrastructure: redshiftProvInfrastructure,
+                    etl: redshiftProvETLTotal,
+                    ops: sharedOpsCosts + redshiftProvSupport
+                },
+                redshiftServer: {
+                    total: redshiftServerTotal,
+                    infrastructure: redshiftServerInfrastructure,
+                    etl: redshiftServerETLTotal,
+                    ops: sharedOpsCosts + redshiftServerSupport
+                }
+            }, months, dataVolume, monthlyQueries);
+        }
+
+        function updateResults(costs, months, dataVolume, monthlyQueries) {
+            // Format currency
+            const fmt = (value) => new Intl.NumberFormat('en-US', { 
+                style: 'currency', 
+                currency: 'USD', 
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0 
+            }).format(value);
+
+            // Update table with breakdown
+            document.getElementById('dremioTotal').textContent = fmt(costs.dremio.total);
+            document.getElementById('dremioInfra').textContent = fmt(costs.dremio.infrastructure);
+            document.getElementById('dremioETL').textContent = fmt(costs.dremio.etl);
+            document.getElementById('dremioOps').textContent = fmt(costs.dremio.ops);
+
+            document.getElementById('redshiftProvTotal').textContent = fmt(costs.redshiftProv.total);
+            document.getElementById('redshiftProvInfra').textContent = fmt(costs.redshiftProv.infrastructure);
+            document.getElementById('redshiftProvETL').textContent = fmt(costs.redshiftProv.etl);
+            document.getElementById('redshiftProvOps').textContent = fmt(costs.redshiftProv.ops);
+
+            document.getElementById('redshiftServerTotal').textContent = fmt(costs.redshiftServer.total);
+            document.getElementById('redshiftServerInfra').textContent = fmt(costs.redshiftServer.infrastructure);
+            document.getElementById('redshiftServerETL').textContent = fmt(costs.redshiftServer.etl);
+            document.getElementById('redshiftServerOps').textContent = fmt(costs.redshiftServer.ops);
+
+            // Update chart
+            const maxCost = Math.max(costs.dremio.total, costs.redshiftProv.total, costs.redshiftServer.total);
+            
+            document.getElementById('dremioBar').style.height = `${(costs.dremio.total / maxCost) * 250}px`;
+            document.getElementById('redshiftProvBar').style.height = `${(costs.redshiftProv.total / maxCost) * 250}px`;
+            document.getElementById('redshiftServerBar').style.height = `${(costs.redshiftServer.total / maxCost) * 250}px`;
+
+            document.getElementById('dremioBarValue').textContent = fmt(costs.dremio.total);
+            document.getElementById('redshiftProvBarValue').textContent = fmt(costs.redshiftProv.total);
+            document.getElementById('redshiftServerBarValue').textContent = fmt(costs.redshiftServer.total);
+
+            // Update savings analysis
+            const maxRedshift = Math.max(costs.redshiftProv.total, costs.redshiftServer.total);
+            const savings = maxRedshift - costs.dremio.total;
+            const savingsPercent = ((savings / maxRedshift) * 100).toFixed(1);
+            
+            // Calculate ETL savings specifically
+            const maxETLCost = Math.max(costs.redshiftProv.etl, costs.redshiftServer.etl);
+            const etlSavings = maxETLCost - costs.dremio.etl;
+            
+            let savingsText;
+            if (savings > 0) {
+                savingsText = `Dremio saves ${fmt(savings)} annually (${savingsPercent}% total savings)\nIncluding ${fmt(etlSavings)} in ETL cost elimination`;
+                document.getElementById('savingsHighlight').style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else {
+                const overage = Math.abs(savings);
+                const overagePercent = ((overage / costs.dremio.total) * 100).toFixed(1);
+                savingsText = `Dremio costs ${fmt(overage)} more annually (+${overagePercent}%)\nBut eliminates ETL complexity and reduces time-to-insight`;
+                document.getElementById('savingsHighlight').style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+            }
+            
+            document.getElementById('savingsText').innerHTML = savingsText.replace('\n', '<br>');
+        }
+
+        // Add event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('input', calculateCosts);
+            });
+            
+            // Initial calculation
+            calculateCosts();
+        });
+    </script>
+</body>
+</html>
+    
+    <!-- GitHub-specific enhancements -->
+    <style>
+        .github-header {
+            background: #24292e;
+            color: white;
+            padding: 10px 20px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .version-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="github-header">
+        🔒 Internal Tool | [Your Company] | 
+        <a href="https://github.com/your-org/your-repo" style="color: #58a6ff;">View Source</a>
+    </div>
+    
+    <!-- Your existing calculator HTML here -->
+    
+    <div class="version-info">
+        v1.0 | Last updated: <span id="lastModified"></span>
+    </div>
+    
+    <script>
+        // Add last modified date
+        document.getElementById('lastModified').textContent = document.lastModified.split(' ')[0];
+        
+        // Your existing calculator JavaScript here
+    </script>
+</body>
+</html>
