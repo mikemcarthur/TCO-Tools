@@ -7,10 +7,6 @@
     <meta name="description" content="Calculate and compare total cost of ownership between Dremio Cloud and Amazon Redshift">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
     
-    <!-- GitHub Pages optimizations -->
-    <meta name="author" content="Sales Engineering Team">
-    <meta name="robots" content="noindex, nofollow">
-    
     <style>
         * {
             margin: 0;
@@ -552,9 +548,8 @@
         <div class="footer">
             <p>
                 <strong>Dremio TCO Calculator</strong> | 
-                <a href="https://github.com/your-org/dremio-tco-calculator/blob/main/docs/usage-guide.md" target="_blank">Usage Guide</a> |
-                <a href="https://github.com/your-org/dremio-tco-calculator/issues/new" target="_blank">Report Issue</a> |
-                Contact: <a href="mailto:sales-engineering@yourcompany.com">Sales Engineering</a>
+                <a href="#" onclick="window.print()">🖨️ Print Results</a> |
+                <a href="mailto:sales-engineering@yourcompany.com">📧 Contact Support</a>
             </p>
             <p style="margin-top: 10px; font-size: 12px;">
                 Last updated: <span id="footerLastModified"></span> | 
@@ -564,7 +559,7 @@
     </div>
 
     <script>
-        // Pricing constants (based on current AWS and Dremio pricing)
+        // Pricing constants
         const PRICING = {
             dremio: {
                 dcuPerHour: 0.39,
@@ -579,8 +574,6 @@
             },
             etl: {
                 gluePerHour: 0.44,
-                lambdaPerMillion: 0.20,
-                stepFunctionsPerTransition: 0.025,
                 dataEngineerSalary: 150000,
                 etlMaintenanceMultiplier: 0.3
             },
@@ -609,34 +602,35 @@
         }
 
         function calculateCosts() {
-            const months = parseInt(document.getElementById('analysisMonths').value);
-            const dataVolume = parseFloat(document.getElementById('dataVolume').value);
-            const monthlyQueries = parseInt(document.getElementById('monthlyQueries').value);
-            const users = parseInt(document.getElementById('concurrentUsers').value);
-            const businessHours = parseFloat(document.getElementById('businessHours').value) / 100;
-            const serverlessUsage = parseFloat(document.getElementById('serverlessUsage').value) / 100;
-            const avgQueryTime = parseInt(document.getElementById('avgQueryTime').value);
+            // Get input values
+            const months = parseInt(document.getElementById('analysisMonths').value) || 12;
+            const dataVolume = parseFloat(document.getElementById('dataVolume').value) || 10;
+            const monthlyQueries = parseInt(document.getElementById('monthlyQueries').value) || 50000;
+            const users = parseInt(document.getElementById('concurrentUsers').value) || 25;
+            const businessHours = parseFloat(document.getElementById('businessHours').value) / 100 || 1;
+            const serverlessUsage = parseFloat(document.getElementById('serverlessUsage').value) / 100 || 0.4;
+            const avgQueryTime = parseInt(document.getElementById('avgQueryTime').value) || 15;
             
-            const dataTransfer = parseInt(document.getElementById('dataTransfer').value);
-            const backupRetention = parseInt(document.getElementById('backupRetention').value);
-            const supportLevel = parseFloat(document.getElementById('supportLevel').value);
-            const trainingUsers = parseInt(document.getElementById('trainingUsers').value);
-            const migrationHours = parseInt(document.getElementById('migrationHours').value);
-            const professionalServices = parseInt(document.getElementById('professionalServices').value);
+            const dataTransfer = parseInt(document.getElementById('dataTransfer').value) || 500;
+            const backupRetention = parseInt(document.getElementById('backupRetention').value) || 6;
+            const supportLevel = parseFloat(document.getElementById('supportLevel').value) || 0.1;
+            const trainingUsers = parseInt(document.getElementById('trainingUsers').value) || 10;
+            const migrationHours = parseInt(document.getElementById('migrationHours').value) || 200;
+            const professionalServices = parseInt(document.getElementById('professionalServices').value) || 40;
 
-            const externalDataTB = parseFloat(document.getElementById('externalDataTB').value);
-            const etlPipelineHours = parseInt(document.getElementById('etlPipelineHours').value);
-            const dataEngineers = parseFloat(document.getElementById('dataEngineers').value);
-            const etlTools = parseInt(document.getElementById('etlTools').value);
-            const dataLatency = parseFloat(document.getElementById('dataLatency').value);
-            const dataQuality = parseFloat(document.getElementById('dataQuality').value);
+            const externalDataTB = parseFloat(document.getElementById('externalDataTB').value) || 5;
+            const etlPipelineHours = parseInt(document.getElementById('etlPipelineHours').value) || 200;
+            const dataEngineers = parseFloat(document.getElementById('dataEngineers').value) || 1;
+            const etlTools = parseInt(document.getElementById('etlTools').value) || 2000;
+            const dataLatency = parseFloat(document.getElementById('dataLatency').value) || 0.7;
+            const dataQuality = parseFloat(document.getElementById('dataQuality').value) || 1;
 
-            // Dremio costs
+            // Dremio costs (Zero-ETL)
             const dcuHours = calculateDCUHours(monthlyQueries, avgQueryTime, users) * serverlessUsage;
             const dremioCompute = dcuHours * PRICING.dremio.dcuPerHour * months;
             const dremioStorage = dataVolume * 1000 * PRICING.dremio.storagePerGBMonth * months;
             const dremioInfrastructure = dremioCompute + dremioStorage;
-            const dremioETLCosts = 0;
+            const dremioETLCosts = 0; // Zero-ETL
             
             // Redshift Provisioned costs
             const nodes = calculateRedshiftNodes(dataVolume);
@@ -645,6 +639,7 @@
             const redshiftProvStorage = dataVolume * 1000 * PRICING.redshift.managedStoragePerGBMonth * months;
             const redshiftProvInfrastructure = redshiftProvCompute + redshiftProvStorage;
             
+            // Redshift Provisioned ETL costs
             const redshiftProvSpectrum = externalDataTB * PRICING.redshift.spectrumPerTB * months;
             const redshiftProvETLInfra = etlPipelineHours * PRICING.etl.gluePerHour * months;
             const redshiftProvDataEngineering = (dataEngineers * PRICING.etl.dataEngineerSalary / 12) * months;
@@ -658,14 +653,14 @@
             const redshiftServerStorage = dataVolume * 1000 * PRICING.redshift.managedStoragePerGBMonth * months;
             const redshiftServerInfrastructure = redshiftServerCompute + redshiftServerStorage;
             
+            // Redshift Serverless ETL costs (spectrum included but still need ETL)
             const redshiftServerETLInfra = etlPipelineHours * PRICING.etl.gluePerHour * months * 0.8;
             const redshiftServerDataEngineering = (dataEngineers * PRICING.etl.dataEngineerSalary / 12) * months;
             const redshiftServerETLTools = etlTools * months;
             const redshiftServerETLMaintenance = (redshiftServerETLInfra + redshiftServerDataEngineering) * PRICING.etl.etlMaintenanceMultiplier;
-            const redshiftServerETLMaintenance = (redshiftServerETLInfra + redshiftServerDataEngineering) * PRICING.etl.etlMaintenanceMultiplier;
             const redshiftServerETLTotal = (redshiftServerETLInfra + redshiftServerDataEngineering + redshiftServerETLTools + redshiftServerETLMaintenance) * dataLatency * dataQuality;
 
-            // Shared costs
+            // Shared operational costs
             const dataTransferCost = dataTransfer * PRICING.shared.dataTransferPerGB * months;
             const backupCost = dataVolume * 1000 * 0.3 * PRICING.redshift.backupStoragePerGBMonth * backupRetention;
             const trainingCost = trainingUsers * PRICING.shared.trainingPerUser;
@@ -673,16 +668,17 @@
             const professionalServicesCost = professionalServices * PRICING.shared.professionalServicesPerHour;
             const sharedOpsCosts = dataTransferCost + backupCost + trainingCost + migrationCost + professionalServicesCost;
             
-            // Support costs
+            // Calculate support costs
             const dremioSupport = (dremioInfrastructure + dremioETLCosts + sharedOpsCosts) * supportLevel;
             const redshiftProvSupport = (redshiftProvInfrastructure + redshiftProvETLTotal + sharedOpsCosts) * supportLevel;
             const redshiftServerSupport = (redshiftServerInfrastructure + redshiftServerETLTotal + sharedOpsCosts) * supportLevel;
 
-            // Total costs
+            // Calculate total costs
             const dremioTotal = dremioInfrastructure + dremioETLCosts + sharedOpsCosts + dremioSupport;
             const redshiftProvTotal = redshiftProvInfrastructure + redshiftProvETLTotal + sharedOpsCosts + redshiftProvSupport;
             const redshiftServerTotal = redshiftServerInfrastructure + redshiftServerETLTotal + sharedOpsCosts + redshiftServerSupport;
 
+            // Update the display
             updateResults({
                 dremio: {
                     total: dremioTotal,
@@ -706,14 +702,15 @@
         }
 
         function updateResults(costs) {
+            // Format currency
             const fmt = (value) => new Intl.NumberFormat('en-US', { 
                 style: 'currency', 
                 currency: 'USD', 
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0 
-            }).format(value);
+            }).format(Math.max(0, value || 0));
 
-            // Update table
+            // Update table with breakdown
             document.getElementById('dremioTotal').textContent = fmt(costs.dremio.total);
             document.getElementById('dremioInfra').textContent = fmt(costs.dremio.infrastructure);
             document.getElementById('dremioETL').textContent = fmt(costs.dremio.etl);
@@ -732,19 +729,22 @@
             // Update chart
             const maxCost = Math.max(costs.dremio.total, costs.redshiftProv.total, costs.redshiftServer.total);
             
-            document.getElementById('dremioBar').style.height = `${(costs.dremio.total / maxCost) * 250}px`;
-            document.getElementById('redshiftProvBar').style.height = `${(costs.redshiftProv.total / maxCost) * 250}px`;
-            document.getElementById('redshiftServerBar').style.height = `${(costs.redshiftServer.total / maxCost) * 250}px`;
+            if (maxCost > 0) {
+                document.getElementById('dremioBar').style.height = `${Math.max(20, (costs.dremio.total / maxCost) * 250)}px`;
+                document.getElementById('redshiftProvBar').style.height = `${Math.max(20, (costs.redshiftProv.total / maxCost) * 250)}px`;
+                document.getElementById('redshiftServerBar').style.height = `${Math.max(20, (costs.redshiftServer.total / maxCost) * 250)}px`;
+            }
 
             document.getElementById('dremioBarValue').textContent = fmt(costs.dremio.total);
             document.getElementById('redshiftProvBarValue').textContent = fmt(costs.redshiftProv.total);
             document.getElementById('redshiftServerBarValue').textContent = fmt(costs.redshiftServer.total);
 
-            // Update savings
+            // Update savings analysis
             const maxRedshift = Math.max(costs.redshiftProv.total, costs.redshiftServer.total);
             const savings = maxRedshift - costs.dremio.total;
-            const savingsPercent = ((savings / maxRedshift) * 100).toFixed(1);
+            const savingsPercent = maxRedshift > 0 ? ((savings / maxRedshift) * 100).toFixed(1) : 0;
             
+            // Calculate ETL savings specifically
             const maxETLCost = Math.max(costs.redshiftProv.etl, costs.redshiftServer.etl);
             const etlSavings = maxETLCost - costs.dremio.etl;
             
@@ -754,7 +754,7 @@
                 document.getElementById('savingsHighlight').style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
             } else {
                 const overage = Math.abs(savings);
-                const overagePercent = ((overage / costs.dremio.total) * 100).toFixed(1);
+                const overagePercent = costs.dremio.total > 0 ? ((overage / costs.dremio.total) * 100).toFixed(1) : 0;
                 savingsText = `Dremio costs ${fmt(overage)} more annually (+${overagePercent}%)<br>But eliminates ETL complexity and reduces time-to-insight`;
                 document.getElementById('savingsHighlight').style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
             }
@@ -762,25 +762,31 @@
             document.getElementById('savingsText').innerHTML = savingsText;
         }
 
-        // Initialize
+        // Initialize the calculator
         document.addEventListener('DOMContentLoaded', function() {
             // Set last modified dates
             const lastMod = new Date().toLocaleDateString();
             document.getElementById('lastModified').textContent = lastMod;
             document.getElementById('footerLastModified').textContent = lastMod;
             
-            // Add event listeners
+            // Add event listeners to all inputs
             const inputs = document.querySelectorAll('input, select');
             inputs.forEach(input => {
                 input.addEventListener('input', calculateCosts);
+                input.addEventListener('change', calculateCosts);
             });
             
-            // Initial calculation
-            calculateCosts();
+            // Run initial calculation
+            setTimeout(calculateCosts, 100);
             
-            // Track usage (optional - add your analytics here)
-            console.log('TCO Calculator loaded successfully');
+            console.log('TCO Calculator initialized successfully');
         });
+
+        // Debug function (can be called from browser console)
+        function debugCalculation() {
+            console.log('Running debug calculation...');
+            calculateCosts();
+        }
     </script>
 </body>
 </html>
