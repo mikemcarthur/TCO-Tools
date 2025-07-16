@@ -88,7 +88,7 @@
         
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
             gap: 30px;
             margin-bottom: 30px;
         }
@@ -281,6 +281,12 @@
             text-decoration: underline;
         }
         
+        @media (max-width: 1200px) {
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
         @media (max-width: 768px) {
             .github-banner {
                 position: static;
@@ -407,7 +413,67 @@
                     </div>
                 </div>
                 
-                <!-- ETL & Data Access Costs -->
+                <!-- Pricing Assumptions -->
+                <div class="section">
+                    <h2>💲 Pricing Assumptions</h2>
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #1e3c72; margin-bottom: 10px;">Dremio Cloud</h4>
+                        <div class="input-group">
+                            <label for="dremioDCUPrice">DCU Price ($/hour)</label>
+                            <input type="number" id="dremioDCUPrice" value="0.39" min="0.01" step="0.01">
+                            <small>Dremio Compute Unit hourly rate</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="dremioStoragePrice">Storage ($/GB/month)</label>
+                            <input type="number" id="dremioStoragePrice" value="0.023" min="0.001" step="0.001">
+                            <small>Dremio managed storage pricing</small>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #1e3c72; margin-bottom: 10px;">Redshift</h4>
+                        <div class="input-group">
+                            <label for="redshiftRPUPrice">RPU Price ($/hour)</label>
+                            <input type="number" id="redshiftRPUPrice" value="0.375" min="0.01" step="0.001">
+                            <small>Redshift Processing Unit for serverless</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="redshiftStoragePrice">Managed Storage ($/GB/month)</label>
+                            <input type="number" id="redshiftStoragePrice" value="0.024" min="0.001" step="0.001">
+                            <small>Redshift managed storage pricing</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="redshiftSpectrumPrice">Spectrum ($/TB scanned)</label>
+                            <input type="number" id="redshiftSpectrumPrice" value="5.00" min="0.1" step="0.1">
+                            <small>External data scanning with Spectrum</small>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 style="color: #1e3c72; margin-bottom: 10px;">ETL & Operations</h4>
+                        <div class="input-group">
+                            <label for="gluePrice">AWS Glue ($/DPU/hour)</label>
+                            <input type="number" id="gluePrice" value="0.44" min="0.01" step="0.01">
+                            <small>Data processing unit pricing</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="dataEngineerSalary">Data Engineer Salary ($/year)</label>
+                            <input type="number" id="dataEngineerSalary" value="150000" min="50000" step="5000">
+                            <small>Annual fully-loaded engineer cost</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="dataTransferPrice">Data Transfer ($/GB)</label>
+                            <input type="number" id="dataTransferPrice" value="0.09" min="0.001" step="0.001">
+                            <small>Cross-region data transfer cost</small>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px; font-size: 12px;">
+                        <strong>💡 Note:</strong> 
+                        Adjust these prices for your region, committed use discounts, or enterprise agreements. 
+                        <a href="#" onclick="resetPricingDefaults()" style="color: #1e3c72;">Reset to defaults</a>
+                    </div>
+                </div>
                 <div class="section">
                     <h2>🔄 ETL & Data Access</h2>
                     <div class="input-group">
@@ -574,31 +640,43 @@
     </div>
 
     <script>
-        // Pricing constants
-        const PRICING = {
-            dremio: {
-                dcuPerHour: 0.39,
-                storagePerGBMonth: 0.023
-            },
-            redshift: {
-                nodePerHour: 0.75,
-                rpuPerHour: 0.375,
-                managedStoragePerGBMonth: 0.024,
-                backupStoragePerGBMonth: 0.024,
-                spectrumPerTB: 5.00
-            },
-            etl: {
-                gluePerHour: 0.44,
-                dataEngineerSalary: 150000,
-                etlMaintenanceMultiplier: 0.3
-            },
-            shared: {
-                dataTransferPerGB: 0.09,
-                trainingPerUser: 2000,
-                migrationPerHour: 200,
-                professionalServicesPerHour: 250
-            }
-        };
+        function getPricing() {
+            return {
+                dremio: {
+                    dcuPerHour: parseFloat(document.getElementById('dremioDCUPrice').value) || 0.39,
+                    storagePerGBMonth: parseFloat(document.getElementById('dremioStoragePrice').value) || 0.023
+                },
+                redshift: {
+                    rpuPerHour: parseFloat(document.getElementById('redshiftRPUPrice').value) || 0.375,
+                    managedStoragePerGBMonth: parseFloat(document.getElementById('redshiftStoragePrice').value) || 0.024,
+                    backupStoragePerGBMonth: parseFloat(document.getElementById('redshiftStoragePrice').value) || 0.024,
+                    spectrumPerTB: parseFloat(document.getElementById('redshiftSpectrumPrice').value) || 5.00
+                },
+                etl: {
+                    gluePerHour: parseFloat(document.getElementById('gluePrice').value) || 0.44,
+                    dataEngineerSalary: parseFloat(document.getElementById('dataEngineerSalary').value) || 150000,
+                    etlMaintenanceMultiplier: 0.3
+                },
+                shared: {
+                    dataTransferPerGB: parseFloat(document.getElementById('dataTransferPrice').value) || 0.09,
+                    trainingPerUser: 2000,
+                    migrationPerHour: 200,
+                    professionalServicesPerHour: 250
+                }
+            };
+        }
+
+        function resetPricingDefaults() {
+            document.getElementById('dremioDCUPrice').value = '0.39';
+            document.getElementById('dremioStoragePrice').value = '0.023';
+            document.getElementById('redshiftRPUPrice').value = '0.375';
+            document.getElementById('redshiftStoragePrice').value = '0.024';
+            document.getElementById('redshiftSpectrumPrice').value = '5.00';
+            document.getElementById('gluePrice').value = '0.44';
+            document.getElementById('dataEngineerSalary').value = '150000';
+            document.getElementById('dataTransferPrice').value = '0.09';
+            calculateCosts();
+        }
 
         function calculateDCUHours(queries, avgTime, users) {
             const totalQuerySeconds = queries * avgTime;
@@ -674,6 +752,9 @@
 
         function calculateCosts() {
             try {
+                // Get current pricing from inputs
+                const PRICING = getPricing();
+                
                 // Get input values with defaults
                 const months = parseInt(document.getElementById('analysisMonths').value) || 12;
                 const dataVolume = parseFloat(document.getElementById('dataVolume').value) || 10;
